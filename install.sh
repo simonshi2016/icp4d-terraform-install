@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 set -x
  
 INSTALLER_DIR=/icp4d_installer
@@ -9,8 +9,8 @@ if [ $# -lt 1 ];then
     exit 1
 fi
 
-generate_conf = 0
-install = 0
+generate_conf=0
+install=0
 
 while getopts g:i:f: arg
 do
@@ -43,10 +43,11 @@ fi
 if [[ $install -ne 1 ]];then
     exit 1
 fi
+
 # validate install.tfvars
 
 # extrac icp4d installer -i aws/azure
-avail=$(df --output=avail -BG ./ | grep -v 'Avail' | cut -dG -f1)
+avail=$(df --output=avail -BG $INSTALLER_DIR | grep -v 'Avail' | cut -dG -f1)
 if [[ $avail -lt 150 ]];then
     echo "disk space needs to have at least 150G"
     exit 1
@@ -55,9 +56,13 @@ fi
 $INSTALLER_DIR/$installer --extract-only --accept-license
 
 icp_installer_loc=$(ls $INSTALLER_DIR/InstallPackage/ibm-cloud-private-x86_64-*)
+icp_filename=$(basename $icp_installer_loc)
+icp_version=$(echo $icp_filename|grep -P "\d\.\d\.\d" -o)
+inception_image="ibmcom/icp-inception-amd64:${icp_version}-ee"
 
 echo "image_location=$icp_installer_loc" >> $INSTALLER_DIR/install.tfvars
 echo "image_location_icp4d=$INSTALLER_DIR/$installer" >> $INSTALLER_DIR/install.tfvars
+echo "icp_inception_image=$inception_image" >> $INSTALLER_DIR/install.tfvars
 
 # run terraform, upload icp installer
 terraform init

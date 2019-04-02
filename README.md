@@ -7,5 +7,9 @@ docker build -t tf-installer -f ./Dockerfile ..
 - -g aws: generate install.tfvars for aws
 - -i azure: install into azure
 - -f icp4d installer name
-./run_install.sh [-g aws] [-i azure] [-f installer_name]
+
+# to generate install.tfvars for azure
+docker run -t -v $(pwd):/icp4d_installer --net=host tf-installer -g azure
+# to install azure
+docker run -t -v $(pwd):/icp4d_installer --net=host tf-installer -i azure installer.x86_64.216
 
