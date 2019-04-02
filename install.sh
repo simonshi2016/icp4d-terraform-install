@@ -4,18 +4,19 @@ set -x
 INSTALLER_DIR=/icp4d_installer
 TERRAFORM_DIR=/terraform
 
-if [ $# -ne 2 ];then
-    echo "usage: $0 [-g aws] [-i azure]"
+if [ $# -ne 3 ];then
+    echo "usage: $0 [-g aws] [-i azure] [-f installer_name]"
     exit 1
 fi
 
-while getopts g:i: arg
+while getopts g:i:f: arg
 do
   case $arg in
     g) generate_conf=1
        cloud=$OPTARG;;
     i) install=1
        cloud=$OPTARG;;
+    f) installer=$OPTARG;;
     ?) echo "usage: $0 [-g aws] [-i azure]"
        exit 1
         ;;
@@ -38,13 +39,19 @@ fi
 # validate install.tfvars
 
 # extrac icp4d installer -i aws/azure
+avail=$(df --output=avail -BG ./ | grep -v 'Avail' | cut -dG -f1)
+if [[ $avail -lt 150 ]];then
+    echo "disk space needs to have at least 150G"
+    exit 1
+fi
 
-# upload icp installer
+$INSTALLER_DIR/$installer --extract-only --accept-license
 
-# update install.tfvars for installer location and keys
+icp_installer_loc=$(ls $INSTALLER_DIR/InstallPackage/ibm-cloud-private-x86_64-*)
 
-# run terraform
+echo "image_location=$icp_installer_loc" >> $INSTALLER_DIR/install.tfvars
+echo "image_location_icp4d=$INSTALLER_DIR/$installer" >> $INSTALLER_DIR/install.tfvars
+
+# run terraform, upload icp installer
 terraform init
-terraform plan -var-file=/icp4d_installer/install.tfvars
-
-# upload icp4d installer and install
+terraform apply -var-file=/$INSTALLER_DIR/install.tfvars -auto-approve
