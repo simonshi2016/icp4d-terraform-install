@@ -1,6 +1,11 @@
 # build
 - install docker
 - build the terraform installer docker
-docker build -t installer .
+docker build -t tf-installer -f ./Dockerfile ..
+
 - run installer docker
-./run_install.sh <AZURE_CLIENT_ID> <AZURE_CLIENT_SECRET> <AZURE_SUBSCRIPTION_ID> <AZURE_TENENT_ID>
+- -g aws: generate install.tfvars for aws
+- -i azure: install into azure
+- -f icp4d installer name
+./run_install.sh [-g aws] [-i azure] [-f installer_name]
+
