@@ -70,5 +70,6 @@ echo "image_location_icp4d=$INSTALLER_DIR/$installer" >> $INSTALLER_DIR/install.
 echo "icp_inception_image=$inception_image" >> $INSTALLER_DIR/install.tfvars
 
 # run terraform, upload icp installer
+cd /terraform/terraform-icp-azure/templates/icp-ee-as
 terraform init
 terraform apply -var-file=/$INSTALLER_DIR/install.tfvars -auto-approve
