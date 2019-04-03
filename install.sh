@@ -11,8 +11,9 @@ fi
 
 generate_conf=0
 install=0
+skipcheck=0
 
-while getopts g:i:f: arg
+while getopts g:i:f:s arg
 do
   case $arg in
     g) generate_conf=1
@@ -20,6 +21,7 @@ do
     i) install=1
        cloud=$OPTARG;;
     f) installer=$OPTARG;;
+    s) skipcheck=1;;
     ?) echo "usage: $0 [-g aws] [-i azure] [-f installer_name]"
        exit 1
         ;;
@@ -47,12 +49,14 @@ fi
 # validate install.tfvars
 
 # extrac icp4d installer -i aws/azure
-avail=$(df --output=avail -BG $INSTALLER_DIR | grep -v 'Avail' | cut -dG -f1)
-if [[ $avail -lt 150 ]];then
-    echo "disk space needs to have at least 150G"
-    exit 1
+if [[ $skipcheck -ne 1 ]];then
+    avail=$(df --output=avail -BG $INSTALLER_DIR | grep -v 'Avail' | cut -dG -f1)
+    if [[ $avail -lt 150 ]];then
+        echo "disk space needs to have at least 150G"
+        exit 1
+    fi
 fi
-
+chmod a+x $INSTALLER_DIR/$installer
 $INSTALLER_DIR/$installer --extract-only --accept-license
 
 icp_installer_loc=$(ls $INSTALLER_DIR/InstallPackage/ibm-cloud-private-x86_64-*)
