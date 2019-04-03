@@ -69,9 +69,9 @@ icp_filename=$(basename $icp_installer_loc)
 icp_version=$(echo $icp_filename|grep -P "\d\.\d\.\d" -o)
 inception_image="ibmcom/icp-inception-amd64:${icp_version}-ee"
 
-echo "image_location=$icp_installer_loc" >> $INSTALLER_DIR/install.tfvars
-echo "image_location_icp4d=$INSTALLER_DIR/$installer" >> $INSTALLER_DIR/install.tfvars
-echo "icp_inception_image=$inception_image" >> $INSTALLER_DIR/install.tfvars
+echo "image_location=\"$icp_installer_loc\"" >> $INSTALLER_DIR/install.tfvars
+echo "image_location_icp4d=\"$INSTALLER_DIR/$installer\"" >> $INSTALLER_DIR/install.tfvars
+echo "icp_inception_image=\"$inception_image\"" >> $INSTALLER_DIR/install.tfvars
 
 # run terraform, upload icp installer
 cd /terraform/terraform-icp-azure/templates/icp-ee-as
