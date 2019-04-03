@@ -12,8 +12,8 @@ fi
 generate_conf=0
 install=0
 skipcheck=0
-
-while getopts g:i:f:s arg
+extract=1
+while getopts g:i:f:sn arg
 do
   case $arg in
     g) generate_conf=1
@@ -22,6 +22,7 @@ do
        cloud=$OPTARG;;
     f) installer=$OPTARG;;
     s) skipcheck=1;;
+    n) extract=0;;
     ?) echo "usage: $0 [-g aws] [-i azure] [-f installer_name]"
        exit 1
         ;;
@@ -56,9 +57,12 @@ if [[ $skipcheck -ne 1 ]];then
         exit 1
     fi
 fi
-chmod a+x $INSTALLER_DIR/$installer
-cd $INSTALLER_DIR
-./$installer --extract-only --accept-license
+
+if [[ $extract -eq 1 ]];then
+    chmod a+x $INSTALLER_DIR/$installer
+    cd $INSTALLER_DIR
+    ./$installer --extract-only --accept-license
+fi
 
 icp_installer_loc=$(ls $INSTALLER_DIR/InstallPackage/ibm-cloud-private-x86_64-*)
 icp_filename=$(basename $icp_installer_loc)
