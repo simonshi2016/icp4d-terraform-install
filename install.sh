@@ -57,7 +57,8 @@ if [[ $skipcheck -ne 1 ]];then
     fi
 fi
 chmod a+x $INSTALLER_DIR/$installer
-$INSTALLER_DIR/$installer --extract-only --accept-license
+cd $INSTALLER_DIR
+./$installer --extract-only --accept-license
 
 icp_installer_loc=$(ls $INSTALLER_DIR/InstallPackage/ibm-cloud-private-x86_64-*)
 icp_filename=$(basename $icp_installer_loc)
