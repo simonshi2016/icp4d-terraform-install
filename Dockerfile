@@ -25,4 +25,4 @@ COPY ./terraform-module-icp-deploy /terraform/terraform-module-icp-deploy
 COPY ./icp4d-terraform-install/install.sh /install/install.sh
 RUN echo y | ssh-keygen -f ~/.ssh/id_rsa -q -N "" 
 RUN chmod a+x /install/install.sh
-#ENTRYPOINT ["/bin/bash","/install.sh"]
+ENTRYPOINT ["/install/install.sh"]
