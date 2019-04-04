@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
  
 INSTALLER_DIR=/icp4d_installer
 TERRAFORM_DIR=/terraform
