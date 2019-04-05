@@ -16,7 +16,7 @@ COPY ./icp4d-terraform-install/install_az.sh /install/install_az.sh
 COPY ./icp4d-terraform-install/install_aws.sh /install/install_aws.sh
 RUN chmod a+x /install/install_az.sh 
 RUN chmod a+x /install/install_aws.sh
-#RUN /install/install_az.sh
+RUN /install/install_az.sh
 #RUN /install/install_aws.sh
 COPY ./icp4d-terraform-install/terraform/terraform /usr/bin
 COPY ./terraform-icp-azure /terraform/terraform-icp-azure

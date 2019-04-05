@@ -13,8 +13,8 @@ apt-key --keyring /etc/apt/trusted.gpg.d/Microsoft.gpg adv \
 apt-get update
 apt-get install azure-cli
 
-echo "Installing AzCopy.."
-cd /tmp
-wget -O azcopy.tar.gz https://aka.ms/downloadazcopylinux64
-tar -xf azcopy.tar.gz
-./install.sh
+#echo "Installing AzCopy.."
+#cd /tmp
+#wget -O azcopy.tar.gz https://aka.ms/downloadazcopylinux64
+#tar -xf azcopy.tar.gz
+#./install.sh
