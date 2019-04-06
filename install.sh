@@ -112,11 +112,16 @@ else
     sed -i '/image_location=/,${d}' $INSTALLER_DIR/install.tfvars
 fi
 
+if [[ "$installer" == "" ]] || [[ ! -f $INSTALLER_DIR/$installer ]];then
+    echo "please provide icp4d installer in the current directory: -f icp_installer_name"
+    exit 1
+fi
+
 # extrac icp4d installer -i aws/azure
 if [[ $skipcheck -ne 1 ]];then
     avail=$(df --output=avail -BG $INSTALLER_DIR | grep -v 'Avail' | cut -dG -f1)
-    if [[ $avail -lt 150 ]];then
-        echo "disk space needs to have at least 75G"
+    if [[ $avail -lt 100 ]];then
+        echo "disk space needs to have at least 100G"
         exit 1
     fi
 else
@@ -124,11 +129,6 @@ else
         echo "please ensure installer has been extracted properly"
         exit 1
     fi
-fi
-
-if [[ "$installer" == "" ]] || [[ ! -f $INSTALLER_DIR/$installer ]];then
-    echo "please provide icp4d installer in the current directory: -f icp_installer_name"
-    exit 1
 fi
 
 if [[ $extract -eq 1 ]];then
