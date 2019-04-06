@@ -116,7 +116,12 @@ fi
 if [[ $skipcheck -ne 1 ]];then
     avail=$(df --output=avail -BG $INSTALLER_DIR | grep -v 'Avail' | cut -dG -f1)
     if [[ $avail -lt 150 ]];then
-        echo "disk space needs to have at least 150G"
+        echo "disk space needs to have at least 75G"
+        exit 1
+    fi
+else
+    if [[ ! -f $INSTALLER_DIR/InstallPackage ]];then
+        echo "please ensure installer has been extracted properly"
         exit 1
     fi
 fi
