@@ -50,16 +50,37 @@ if [[ $install -ne 1 ]];then
 fi
 
 # validate install.tfvars
+map_start=0
 while read line; do 
     if [[ ! $line =~ ^#.* ]] && [[ ! -z "$line" ]];then
         key=$(echo $line | awk -F= '{print $1}')
         value=$(echo $line | awk -F= '{print $2}')
-        value=${value:1:-1}
+
+        if [[ "$value" == "{" ]];then
+            map_start=$((map_start+1))
+            continue
+        fi
+
+        if [[ "$key" == "}" ]];then
+            if [[ $map_start -lt 1 ]];then
+                echo "wrong map configuration block"
+                exit 1
+            fi
+            map_start=$((map_start-1))
+            continue
+        fi
+
+        # to support potential list
+        if [[ "${value:0:1}" == '"' ]] && [[ "${value: -1}" == '"' ]];then
+            value=${value:1:-1}
+        fi
 
         if [[ "$value" == "" ]];then
             echo "$key is empty"
             exit 1
         fi
+
+        echo "$key=$value"
 
         case $key in
             location)
@@ -89,6 +110,11 @@ while read line; do
         esac
     fi  
 done < $INSTALLER_DIR/install.tfvars
+
+if [[ $map_start -ne 0 ]];then
+    echo "wrong map configuration block"
+    exit 1
+fi
 
 if which az > /dev/null;then
     az login --service-principal -u $client_id -p $client_secret --tenant $tenant_id > /dev/null
