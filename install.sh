@@ -80,8 +80,6 @@ while read line; do
             exit 1
         fi
 
-        echo "$key=$value"
-
         case $key in
             location)
                 if [[ ! $value =~ .*\ .* ]];then
