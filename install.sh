@@ -20,7 +20,7 @@ do
     ?) echo "usage: generate install.tfvars file:
             docker run -v \$(pwd):/icp4d_installer -t tf-installer -g azure
             to install:
-            docker run -v \$(pwd):/icp4d_installer -t tf-installer -i azure -f installer_name"
+            docker run -v \$(pwd):/icp4d_installer -it -d tf-installer -i azure -f installer_name"
        exit 1
         ;;
   esac
@@ -28,7 +28,7 @@ done
 shift $(($OPTIND-1)) 
 
 if [[ $install -eq 1 ]] && [[ "$cloud" == "" ]];then
-    echo "docker run -v $(pwd):/icp4d_installer -t tf-installer -i azure -f installer_name"
+    echo "docker run -v $(pwd):/icp4d_installer -it -d tf-installer -i azure -f installer_name"
     exit 1
 fi
 
