@@ -1,7 +1,7 @@
 #! /bin/bash
 
 echo "Installing az.."
-apt-get install apt-transport-https lsb-release software-properties-common dirmngr -y
+apt-get install apt-transport-https lsb-release software-properties-common dirmngr libunwind-dev -y
 
 AZ_REPO=$(lsb_release -cs)
 echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" | \
@@ -13,8 +13,8 @@ apt-key --keyring /etc/apt/trusted.gpg.d/Microsoft.gpg adv \
 apt-get update
 apt-get install azure-cli
 
-#echo "Installing AzCopy.."
-#cd /tmp
-#wget -O azcopy.tar.gz https://aka.ms/downloadazcopylinux64
-#tar -xf azcopy.tar.gz
-#./install.sh
+echo "Installing AzCopy.."
+cd /tmp
+wget -O azcopy.tar.gz https://aka.ms/downloadazcopylinux64
+tar -xf azcopy.tar.gz
+./install.sh > /tmp/azcopy_install.log
