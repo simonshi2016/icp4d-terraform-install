@@ -6,7 +6,7 @@ TERRAFORM_DIR=/terraform
 generate_conf=0
 install=0
 extract=1
-while getopts g:i:f:sn arg
+while getopts g:i:f:n arg
 do
   case $arg in
     g) generate_conf=1
@@ -16,9 +16,9 @@ do
     f) installer=$OPTARG;;
     n) extract=0;;
     ?) echo "usage: generate install.tfvars file:
-            docker run -v \$(pwd):/icp4d_installer -t tf-installer -g azure
+            docker run -v \$(pwd):/icp4d_installer tf-installer -g <azure|aws>
             to install:
-            docker run -v \$(pwd):/icp4d_installer -it -d tf-installer -i azure -f installer_name"
+            docker run -v \$(pwd):/icp4d_installer -it -d tf-installer -i <azure|aws> -f <installer_name>"
        exit 1
         ;;
   esac
@@ -26,7 +26,7 @@ done
 shift $(($OPTIND-1)) 
 
 if [[ $install -eq 1 ]] && [[ "$cloud" == "" ]];then
-    echo "docker run -v $(pwd):/icp4d_installer -it -d tf-installer -i azure -f installer_name"
+    echo "docker run -v $(pwd):/icp4d_installer -it -d tf-installer -i <azure|aws> -f <installer_name>"
     exit 1
 fi
 
@@ -34,6 +34,10 @@ fi
 if [[ $generate_conf -eq 1 ]];then
     if [[ "$cloud" == "aws" ]];then
         cp $TERRAFORM_DIR/terraform-icp-aws/install.conf $INSTALLER_DIR/install.tfvars
+        echo 'installation configuration template file install.tfvars has been generated under current directory,
+please enter information and make sure icp4d installer is copied to the current directory, if you install addon modules,
+please create modules directory and put modules into it, to start install run the following command:
+"docker run -v $(pwd):/icp4d_installer -it -d tf-installer -i <azure|aws> -f <installer_name>"'
     elif [[ "$cloud" == "azure" ]];then
         cp $TERRAFORM_DIR/terraform-icp-azure/templates/icp-ee-as/install.conf $INSTALLER_DIR/install.tfvars
     else
@@ -186,7 +190,7 @@ function validate_aws {
         aws configure set aws_secret_access_key $aws_secret_key
         aws configure set default.region $aws_region
 
-        aws ec2 describe-key-pairs --key-names=$key_name
+        aws ec2 describe-key-pairs --key-names=$key_name > /dev/null
         if [[ $? -ne 0 ]];then
             exit 1
         fi
@@ -231,6 +235,10 @@ else
 fi
 
 icp_installer_loc=$(ls $INSTALLER_DIR/InstallPackage/ibm-cloud-private-x86_64-*)
+if [[ $? -ne 0 ]];then
+    echo "icp4d installer was not extracted properly"
+    exit 1
+fi
 icp_filename=$(basename $icp_installer_loc)
 icp_version=$(echo $icp_filename|grep -P "\d\.\d\.\d" -o)
 inception_image="ibmcom/icp-inception-amd64:${icp_version}-ee"
