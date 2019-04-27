@@ -92,7 +92,7 @@ function validate_azure {
                     ;;
                 ssh_public_key)
                     echo $value > sshkey
-                    ssh-keygen -l -f sshkey > /dev/null
+                    ssh-keygen -l -f sshkey > /dev/null 2>&1
                     if [[ $? -ne 0 ]];then
                         rm -rf sshkey
                         echo "ssh_public_key is not a valid ssh public key"
