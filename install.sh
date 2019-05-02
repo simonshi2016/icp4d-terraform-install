@@ -6,6 +6,32 @@ TERRAFORM_DIR=/terraform
 generate_conf=0
 install=0
 extract=1
+TERMS_AND_CONDITIONS_URL="http://www14.software.ibm.com/cgi-bin/weblap/lap.pl?la_formnum=&li_formnum=L-KMRY-B2632F&title=IBM+Cloud+Private+for+Data+-+Enterprise+Edition+V1.1.0.1+(bundles+ICP+Foundation)&l=en"
+
+function askLicenseAccept() {
+    echo
+    echo "By typing (A), you agree to the terms and conditions: ${TERMS_AND_CONDITIONS_URL}"
+    echo
+    echo 'Type (R) if you do not agree to the terms and conditions'
+    echo
+    while [[ 1 ]]; do
+        printf "Please type (A) for accept or (R) for reject: "
+        read is_accept
+        echo
+        case "${is_accept}" in
+            A|a )
+                break;;
+            R|r )
+                echo "User rejected the terms and conditions, exiting..."
+                exit 1
+                ;;
+            * )
+                echo "Unrecognized answer, please try again..."
+                ;;
+        esac
+    done
+}
+
 while getopts g:i:f:n arg
 do
   case $arg in
@@ -260,6 +286,8 @@ fi
 if [[ "$cloud" == "aws" ]];then
     cd /terraform/terraform-icp-aws
 fi
+
+askLicenseAccept
 
 terraform init
 terraform apply -var-file=$INSTALLER_DIR/install.tfvars -auto-approve
