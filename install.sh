@@ -278,6 +278,11 @@ if [[ "$cloud" == "aws" ]];then
     echo "docker_package_location=\"$icp_docker_loc\"" >> $INSTALLER_DIR/install.tfvars
 fi
 
+if [[ "$cloud" == "azure" ]];then
+    # needed for rhel only
+    echo "image_location_docker=\"$icp_docker_loc\"" >> $INSTALLER_DIR/install.tfvars
+fi
+
 # run terraform, upload icp installer
 if [[ "$cloud" == "azure" ]];then
     cd /terraform/terraform-icp-azure/templates/icp-ee-as
