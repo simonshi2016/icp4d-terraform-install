@@ -81,6 +81,12 @@ function validate_azure {
             echo "please provide the correct subscription ID"
             exit 1
         fi
+
+        role=$(az role assignment list --assignee $client_id --query [0].roleDefinitionName -otsv)
+        if [[ "$role" != "Contributor" ]];then
+            echo "please ensure service principle $client_id used for creating azure resources has 'Contributor' role assigned"
+            exit 1
+        fi
     fi
 }
 
@@ -155,7 +161,7 @@ extract=1
 accept_license=0
 TERMS_AND_CONDITIONS_URL="http://www14.software.ibm.com/cgi-bin/weblap/lap.pl?la_formnum=&li_formnum=L-KMRY-B2632F&title=IBM+Cloud+Private+for+Data+-+Enterprise+Edition+V1.1.0.1+(bundles+ICP+Foundation)&l=en"
 
-while getopts g:i:f:n:a arg
+while getopts g:i:f:na arg
 do
   case $arg in
     g) generate_conf=1
