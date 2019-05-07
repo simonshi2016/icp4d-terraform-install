@@ -155,13 +155,57 @@ function validate_aws {
     fi
 }
 
+function uninstall() {
+    if [[ $uninstall -ne 1 ]];then
+        return 1
+    fi
+
+    if [[ ! -d $INSTALLER_DIR ]];then
+        echo "to uninstall, please run: 
+        docker run -v $(pwd):/icp4d_installer -it tf-installer -u [aws|azure]"
+        return 1
+    fi
+
+    if [[ ! -f $INSTALLER_DIR/terraform.tfstate ]] || [[ ! -d $INSTALLER_DIR/.terraform ]];then
+        echo "terraform backup information not found, please delete resource from portal manually"
+        return 1
+    fi
+
+    if [[ ! -f $INSTALLER_DIR/install.tfvars ]];then
+        echo "install.tfvars folder is missing, please delete resource from portal manually"
+        return 1
+    fi
+
+    if [[ "$cloud" == "aws" ]];then
+        cd /terraform/terraform-icp-aws
+    elif [[ "$cloud" == "azure" ]];then
+        cd /terraform/terraform-icp-azure/templates/icp-ee-as
+    else
+        echo "cloud $cloud is not supported"
+        return 1
+    fi
+
+    cp -r $INSTALLER_DIR/.terraform .
+    cp $INSTALLER_DIR/terraform.tfstate .
+
+    echo "destroying cluster..."
+    terraform destroy -var-file=$INSTALLER_DIR/install.tfvars -auto-approve
+    if [[ $? -eq 0 ]];then
+        rm -rf $INSTALLER_DIR/.terraform
+        rm -rf $INSTALLER_DIR/terraform.tfstate
+    else
+        return $?
+    fi
+}
+
 generate_conf=0
 install=0
 extract=1
 accept_license=0
+uninstall=0
 TERMS_AND_CONDITIONS_URL="http://www14.software.ibm.com/cgi-bin/weblap/lap.pl?la_formnum=&li_formnum=L-KMRY-B2632F&title=IBM+Cloud+Private+for+Data+-+Enterprise+Edition+V1.1.0.1+(bundles+ICP+Foundation)&l=en"
 
-while getopts g:i:f:na arg
+while getopts g:i:f:nau: arg
 do
   case $arg in
     g) generate_conf=1
@@ -171,11 +215,15 @@ do
     f) installer=$OPTARG;;
     a) accept_license=1;;
     n) extract=0;;
+    u) uninstall=1
+       cloud=$OPTARG;;
     ?) echo "usage: 
 generate install.tfvars file:
     docker run -v \$(pwd):/icp4d_installer tf-installer -g <azure|aws>
 to install:
-    docker run -v \$(pwd):/icp4d_installer -it -d tf-installer -i <azure|aws> -f <installer_name> -a"
+    docker run -v \$(pwd):/icp4d_installer -it -d tf-installer -i <azure|aws> -f <installer_name> -a
+to uninstall:
+    docker run -v \$(pwd):/icp4d_installer -it tf-installer -u <azure|aws>"
        exit 1
         ;;
   esac
@@ -197,6 +245,11 @@ please enter information and make sure icp4d installer is copied to the current 
 please create modules directory and put modules into it, to start install run the following command:
 "docker run -v $(pwd):/icp4d_installer -it -d tf-installer -i <azure|aws> -f <installer_name> -a"'
     exit 0
+fi
+
+if [[ $uninstall -eq 1 ]];then
+    uninstall
+    exit $?
 fi
 
 if [[ $install -ne 1 ]];then
@@ -275,5 +328,8 @@ if [[ "$cloud" == "azure" ]];then
     cd /terraform/terraform-icp-azure/templates/icp-ee-as
 fi
 
+
 terraform init
 terraform apply -var-file=$INSTALLER_DIR/install.tfvars -auto-approve
+cp -r ./.terraform $INSTALLER_DIR
+cp ./terraform.tfstate $INSTALLER_DIR
