@@ -152,6 +152,17 @@ function validate_aws {
         if [[ $? -ne 0 ]];then
             exit 1
         fi
+
+        checkAwsPermissions
+        if [[ $? -ne 0 ]];then
+            echo -e "\e[34mwould you like to continue(y|N)?\e[0m"
+            read answer
+            if [[ "$answer" == "y" ]] || [[ "$answer" == "Y" ]];then
+                return
+            else
+                exit 1
+            fi
+        fi
     fi
 }
 
@@ -196,6 +207,60 @@ function uninstall() {
     else
         return $?
     fi
+}
+
+function checkAwsPermissions() {
+    user_admin=0
+    grp_admin=0
+    username=$(aws iam list-access-keys --query AccessKeyMetadata[0].UserName --output text)
+    user_inline=$(aws iam list-user-policies --user-name $username --query "PolicyNames" --output text)
+    user_attached=$(aws iam list-attached-user-policies --user-name $username --query "AttachedPolicies[].PolicyName" --output text)
+    for p in ${user_attached[@]};do
+        if [[ "$p" == "AdministratorAccess" ]];then
+            user_admin=1
+            break
+        fi
+    done
+    groups=$(aws iam list-groups-for-user --user-name $username --query 'Groups[].GroupName' --output text)
+    declare -a group_inline
+    declare -a group_attached
+
+    for g in ${groups[@]};do
+        group_inline["$g"]=$(aws iam list-group-policies --group-name $g --query "PolicyNames" --output text)
+        group_attached["$g"]=$(aws iam list-attached-group-policies --group-name $g --query "AttachedPolicies[].PolicyName" --output text)
+        for p in ${group_attached[@]};do
+            if [[ "$p" == "AdministratorAccess" ]];then
+                grp_admin=1
+                break
+            fi
+        done
+    done
+
+    aws_resources=("EC2Instances"" "EBSVolume" "NetworkInterface" "SecurityGroups" "Route53" "VPC" "ELB" "LBTargetGroups" "EFS" "Subnet" "NATGateway" "InternetGateway" "ElasticIP" "IAMrole" "InstanceProfile" "S3" AutoscalingGroup" "Lambda")
+    if [[ $user_admin -ne 1 ]] && [[ $grp_admin -ne 1 ]];then
+        echo -e "\e[31m\"AdministratorAccess\" policy not found in your current user/group policies:"
+        echo -e "\e[0m"
+        echo "user inline policies:"
+        echo "$user_inline"
+        echo "user attached policies:"
+        echo "$user_attached"
+        for g in ${groups[@]};do
+            echo "group '$g' inline policies:"
+            echo "${group_inline["$g"]}"
+            echo "group '$g' attached policies:"
+            echo "${group_attached["$g"]}"
+        done
+        
+        echo "please make sure you have enough permission to create the following aws resources:"
+        echo
+        for r in ${aws_resources[@]}; do
+            echo $r
+        done
+
+        return 1
+    fi
+
+    return 0
 }
 
 generate_conf=0
