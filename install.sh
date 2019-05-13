@@ -2,6 +2,10 @@
  
 INSTALLER_DIR=/icp4d_installer
 TERRAFORM_DIR=/terraform
+TERRAFORM_DIR_AWS=$TERRAFORM_DIR/terraform-icp-aws
+TERRAFORM_DIR_AZURE=$TERRAFORM_DIR/terraform-icp-azure/templates/icp-ee-as
+
+source /install/resources.sh
 
 # validate install.tfvars
 function validate_azure {
@@ -19,7 +23,7 @@ function validate_azure {
             if [[ "$key" == "}" ]];then
                 if [[ $map_start -lt 1 ]];then
                     echo "wrong map configuration block"
-                    exit 1
+                    return 1
                 fi
                 map_start=$((map_start-1))
                 continue
@@ -32,14 +36,14 @@ function validate_azure {
 
             if [[ "$value" == "" ]];then
                 echo "$key is empty"
-                exit 1
+                return 1
             fi
 
             case $key in
                 location)
                     if [[ ! $value =~ .*\ .* ]];then
                         echo "Wrong azure region format: i.e West US"
-                        exit 1
+                        return 1
                     fi
                     ;;
                 ssh_public_key)
@@ -48,7 +52,7 @@ function validate_azure {
                     if [[ $? -ne 0 ]];then
                         rm -rf sshkey
                         echo "ssh_public_key is not a valid ssh public key"
-                        exit 1
+                        return 1
                     fi
                     rm -rf sshkey
                     ;;
@@ -66,26 +70,35 @@ function validate_azure {
 
     if [[ $map_start -ne 0 ]];then
         echo "wrong map configuration block"
-        exit 1
+        return 1
     fi
 
     if which az > /dev/null;then
         az login --service-principal -u $client_id -p $client_secret --tenant $tenant_id > /dev/null
         if [[ $? -ne 0 ]];then
             echo "please provide the correct client_id, client_secret and tenant_id"
-            exit 1
+            return 1
         fi
 
         az account set --subscription $subscription_id > /dev/null
         if [[ $? -ne 0 ]];then
             echo "please provide the correct subscription ID"
-            exit 1
+            return 1
         fi
 
         role=$(az role assignment list --assignee $client_id --query [0].roleDefinitionName -otsv)
         if [[ "$role" != "Contributor" ]];then
             echo "please ensure service principle $client_id used for creating azure resources has 'Contributor' role assigned"
-            exit 1
+            return 1
+        fi
+
+        get_cluster_azure $TERRAFORM_DIR_AZURE/variables.tf $INSTALLER_DIR/install.tfvars
+        echo -e "\e[1;34mPlease make sure that your account has enough quota to create the resources, would you like to continue(y|N)?\e[0m"
+        read answer
+        if [[ "$answer" == "y" ]] || [[ "$answer" == "Y" ]];then
+            return 0
+        else
+            return 1
         fi
     fi
 }
@@ -105,7 +118,7 @@ function validate_aws {
             if [[ "$key" == "}" ]];then
                 if [[ $map_start -lt 1 ]];then
                     echo "wrong map configuration block"
-                    exit 1
+                    return 1
                 fi
                 map_start=$((map_start-1))
                 continue
@@ -118,14 +131,14 @@ function validate_aws {
 
             if [[ "$value" == "" ]];then
                 echo "$key is empty"
-                exit 1
+                return 1
             fi
 
             case $key in
                 aws_region)
                     if [[ ! $value =~ .*\-.*\-[0-9] ]];then
                         echo "Wrong aws region format: i.e. us-east-2"
-                        exit 1
+                        return 1
                     fi
                     aws_region=$value;;
                 aws_access_key)
@@ -140,7 +153,7 @@ function validate_aws {
 
     if [[ $map_start -ne 0 ]];then
         echo "wrong map configuration block"
-        exit 1
+        return 1
     fi
 
     if which aws > /dev/null;then
@@ -150,18 +163,23 @@ function validate_aws {
 
         aws ec2 describe-key-pairs --key-names=$key_name > /dev/null
         if [[ $? -ne 0 ]];then
-            exit 1
+            return 1
         fi
 
         checkAwsPermissions
         if [[ $? -ne 0 ]];then
-            echo -e "\e[34mwould you like to continue(y|N)?\e[0m"
+            echo -e "\e[1;34mwould you like to continue(y|N)?\e[0m"
             read answer
-            if [[ "$answer" == "y" ]] || [[ "$answer" == "Y" ]];then
-                return
-            else
-                exit 1
+            if [[ "$answer" != "y" ]] && [[ "$answer" != "Y" ]];then
+                return 1
             fi
+        fi
+
+        get_cluster_aws $TERRAFORM_DIR_AWS/variables.tf $INSTALLER_DIR/install.tfvars
+        echo -e "\e[34mPlease make sure that your account has enough quota to create the resources, would you like to continue(y|N)?\e[0m"
+        read answer
+        if [[ "$answer" != "y" ]] && [[ "$answer" != "Y" ]];then
+            return 1
         fi
     fi
 }
@@ -188,9 +206,9 @@ function uninstall() {
     fi
 
     if [[ "$cloud" == "aws" ]];then
-        cd /terraform/terraform-icp-aws
+        cd $TERRAFORM_DIR_AWS
     elif [[ "$cloud" == "azure" ]];then
-        cd /terraform/terraform-icp-azure/templates/icp-ee-as
+        cd $TERRAFORM_DIR_AWS
     else
         echo "cloud $cloud is not supported"
         return 1
@@ -238,8 +256,7 @@ function checkAwsPermissions() {
 
     aws_resources=("EC2Instances"" "EBSVolume" "NetworkInterface" "SecurityGroups" "Route53" "VPC" "ELB" "LBTargetGroups" "EFS" "Subnet" "NATGateway" "InternetGateway" "ElasticIP" "IAMrole" "InstanceProfile" "S3" AutoscalingGroup" "Lambda")
     if [[ $user_admin -ne 1 ]] && [[ $grp_admin -ne 1 ]];then
-        echo -e "\e[31m\"AdministratorAccess\" policy not found in your current user/group policies:"
-        echo -e "\e[0m"
+        echo -e "\e[1;31m\"AdministratorAccess\" policy not found in your current user/group policies:\e[0m"
         echo "user inline policies:"
         echo "$user_inline"
         echo "user attached policies:"
@@ -251,7 +268,7 @@ function checkAwsPermissions() {
             echo "${group_attached["$g"]}"
         done
         
-        echo "please make sure you have enough permission to create the following aws resources:"
+        echo -e "\e[1;34mplease make sure you have enough permission to create the following aws resources:\e[0m"
         echo
         for r in ${aws_resources[@]}; do
             echo $r
@@ -324,7 +341,7 @@ docker run -v $(pwd):/icp4d_installer -it -d tf-installer -i <azure|aws> -f <ins
 fi
 
 if [[ $accept_license -ne 1 ]];then
-    echo "Please accept license with -a, license can be viewed here: $TERMS_AND_CONDITIONS_URL"
+    echo "Please append -a to accept license, license can be viewed here: $TERMS_AND_CONDITIONS_URL"
     exit 1
 fi
 
@@ -338,8 +355,16 @@ fi
 
 if [[ "$cloud" == "azure" ]];then
     validate_azure
+    if [[ $? -ne 0 ]];then
+        echo "azure validation exited"
+        exit 1
+    fi
 elif [[ "$cloud" == "aws" ]];then
     validate_aws
+    if [[ $? -ne 0 ]];then
+        echo "aws validation exited"
+        exit 1
+    fi
 else
     echo "please specify the cloud with -i <aws|azure>"
     exit 1
@@ -361,6 +386,10 @@ if [[ $extract -eq 1 ]];then
     chmod a+x $INSTALLER_DIR/$installer
     cd $INSTALLER_DIR
     ./$installer --extract-only --accept-license
+    if [[ $? -ne 0 ]];then
+        echo "unable to extract $installer, please make sure $installer file is not corrupted"
+        exit 1
+    fi
 else
     if [[ ! -d $INSTALLER_DIR/InstallPackage ]];then
         echo "please ensure installer has been extracted properly"
@@ -377,6 +406,10 @@ icp_filename=$(basename $icp_installer_loc)
 icp_version=$(echo $icp_filename|grep -P "\d\.\d\.\d" -o)
 inception_image="ibmcom/icp-inception-amd64:${icp_version}-ee"
 icp_docker_loc=$(ls $INSTALLER_DIR/InstallPackage/icp-docker-*)
+if [[ $? -ne 0 ]];then
+    echo "icp4d installer was not extracted properly"
+    exit 1
+fi
 
 echo "image_location=\"$icp_installer_loc\"" >> $INSTALLER_DIR/install.tfvars
 echo "image_location_icp4d=\"$INSTALLER_DIR/$installer\"" >> $INSTALLER_DIR/install.tfvars
@@ -384,17 +417,30 @@ echo "icp_inception_image=\"$inception_image\"" >> $INSTALLER_DIR/install.tfvars
 
 if [[ "$cloud" == "aws" ]];then
     echo "docker_package_location=\"$icp_docker_loc\"" >> $INSTALLER_DIR/install.tfvars
-    cd /terraform/terraform-icp-aws
+    cd $TERRAFORM_DIR_AWS
 fi
 
 if [[ "$cloud" == "azure" ]];then
     # needed for rhel only
     echo "image_location_docker=\"$icp_docker_loc\"" >> $INSTALLER_DIR/install.tfvars
-    cd /terraform/terraform-icp-azure/templates/icp-ee-as
+    cd $TERRAFORM_DIR_AZURE
 fi
 
+if [[ -d $INSTALLER_DIR/.terraform ]];then
+    rm -rf $INSTALLER_DIR/.terraform
+fi
+
+if [[ -f $INSTALLER_DIR/terraform.tfstate ]];then
+    rm -rf $INSTALLER_DIR/terraform.tfstate
+fi
 
 terraform init
 terraform apply -var-file=$INSTALLER_DIR/install.tfvars -auto-approve
-cp -r ./.terraform $INSTALLER_DIR
-cp ./terraform.tfstate $INSTALLER_DIR
+
+if [[ -d $INSTALLER_DIR/.terraform ]];then
+    cp -r ./.terraform $INSTALLER_DIR
+fi
+
+if [[ -f ./terraform.tfstate ]];then
+    cp ./terraform.tfstate $INSTALLER_DIR
+fi
