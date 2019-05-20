@@ -291,6 +291,7 @@ function get_cluster_azure() {
     local install_file_content=$(cat $install_file)
     
     get_map_values "$variable_file_content" "$install_file_content" worker nodes
+    local worker_nodes=${map_values[0]:-0}
 
     declare -A volumes
     for n in boot master worker proxy;do
@@ -308,8 +309,12 @@ function get_cluster_azure() {
             disk_type=${map_values[$i]}
             disk_size=${map_values[$((i+1))]:-0}
             disk_size=$((disk_size*nodes))
+            if [[ "$n" == "master" ]] && [[ $worker_nodes -ne 0 ]] && [[ "${keys[$i]}" == "data_disk_type" ]];then
+                disk_size=0
+            fi
+
             if [[ "$disk_type" != "" ]];then
-                volumes[$disk_type]=$((volumes[$disk_type]+disk_size))
+                volumes[$disk_type]=$((volumes[$disk_type]+$disk_size))
             fi
         done
     done
