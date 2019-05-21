@@ -20,10 +20,15 @@ RUN chmod a+x /install/install_aws.sh
 RUN /install/install_az.sh
 RUN /install/install_aws.sh
 COPY ./icp4d-terraform-install/terraform/terraform /usr/bin
+COPY ./terraform-module-icp-deploy /terraform/terraform-module-icp-deploy
 COPY ./terraform-icp-azure /terraform/terraform-icp-azure
 COPY ./terraform-icp-aws /terraform/terraform-icp-aws
-COPY ./terraform-module-icp-deploy /terraform/terraform-module-icp-deploy
+WORKDIR /terraform/terraform-icp-azure/templates/icp-ee-as
+RUN terraform init
+WORKDIR /terraform/terraform-icp-aws
+RUN terraform init
 COPY ./icp4d-terraform-install/install.sh /install/install.sh
 RUN echo y | ssh-keygen -f ~/.ssh/id_rsa -q -N "" 
+WORKDIR /install
 RUN chmod a+x /install/install.sh
 ENTRYPOINT ["/install/install.sh"]

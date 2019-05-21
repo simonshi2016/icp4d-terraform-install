@@ -176,7 +176,7 @@ function validate_aws {
         fi
 
         get_cluster_aws $TERRAFORM_DIR_AWS/variables.tf $INSTALLER_DIR/install.tfvars
-        echo -e "\e[34mPlease make sure that your account has enough quota to create the resources, would you like to continue(y|N)?\e[0m"
+        echo -e "\e[1;34mPlease make sure that your account has enough quota to create the resources, would you like to continue(y|N)?\e[0m"
         read answer
         if [[ "$answer" != "y" ]] && [[ "$answer" != "Y" ]];then
             return 1
@@ -207,14 +207,19 @@ function uninstall() {
 
     if [[ "$cloud" == "aws" ]];then
         cd $TERRAFORM_DIR_AWS
+        TERRAFORM_DIR=$TERRAFORM_DIR_AWS
     elif [[ "$cloud" == "azure" ]];then
-        cd $TERRAFORM_DIR_AWS
+        cd $TERRAFORM_DIR_AZURE
+        TERRAFORM_DIR=$TERRAFORM_DIR_AZURE
     else
         echo "cloud $cloud is not supported"
         return 1
     fi
 
-    cp -r $INSTALLER_DIR/.terraform .
+    if [[ ! -d $TERRAFORM_DIR/.terraform ]];then
+        cp -r $INSTALLER_DIR/.terraform .
+    fi
+
     cp $INSTALLER_DIR/terraform.tfstate .
 
     echo "destroying cluster..."
@@ -353,6 +358,8 @@ else
     sed -i '/image_location=/,${d}' $INSTALLER_DIR/install.tfvars
 fi
 
+echo "Initializing the enviroment, please wait..."
+
 if [[ "$cloud" == "azure" ]];then
     validate_azure
     if [[ $? -ne 0 ]];then
@@ -418,12 +425,14 @@ echo "icp_inception_image=\"$inception_image\"" >> $INSTALLER_DIR/install.tfvars
 if [[ "$cloud" == "aws" ]];then
     echo "docker_package_location=\"$icp_docker_loc\"" >> $INSTALLER_DIR/install.tfvars
     cd $TERRAFORM_DIR_AWS
+    TERRAFORM_DIR=$TERRAFORM_DIR_AWS
 fi
 
 if [[ "$cloud" == "azure" ]];then
     # needed for rhel only
     echo "image_location_docker=\"$icp_docker_loc\"" >> $INSTALLER_DIR/install.tfvars
     cd $TERRAFORM_DIR_AZURE
+    TERRAFORM_DIR=$TERRAFORM_DIR_AZURE
 fi
 
 if [[ -d $INSTALLER_DIR/.terraform ]];then
@@ -437,10 +446,12 @@ fi
 terraform init
 terraform apply -var-file=$INSTALLER_DIR/install.tfvars -auto-approve
 
-if [[ -d $INSTALLER_DIR/.terraform ]];then
-    cp -r ./.terraform $INSTALLER_DIR
+if [[ -f $TERRAFORM_DIR/terraform.tfstate ]];then
+    cp $TERRAFORM_DIR/terraform.tfstate $INSTALLER_DIR
 fi
 
-if [[ -f ./terraform.tfstate ]];then
-    cp ./terraform.tfstate $INSTALLER_DIR
+if [[ -d $TERRAFORM_DIR/.terraform ]];then
+    cp -r $TERRAFORM_DIR/.terraform $INSTALLER_DIR
 fi
+
+
