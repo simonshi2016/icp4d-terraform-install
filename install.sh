@@ -308,7 +308,7 @@ do
 generate install.tfvars file:
     docker run -v \$(pwd):/icp4d_installer tf-installer -g <azure|aws>
 to install:
-    docker run -v \$(pwd):/icp4d_installer -it -d tf-installer -i <azure|aws> -f <installer_name> -a
+    docker run -v \$(pwd):/icp4d_installer -it tf-installer -i <azure|aws> -f <installer_name> -a
 to uninstall:
     docker run -v \$(pwd):/icp4d_installer -it tf-installer -u <azure|aws>"
        exit 1
@@ -330,7 +330,7 @@ if [[ $generate_conf -eq 1 ]];then
     echo 'installation configuration template file install.tfvars has been generated under current directory,
 please enter information and make sure icp4d installer is copied to the current directory, if you install addon modules,
 please create modules directory and put modules into it, to start install run the following command:
-"docker run -v $(pwd):/icp4d_installer -it -d tf-installer -i <azure|aws> -f <installer_name> -a"'
+"docker run -v $(pwd):/icp4d_installer -it tf-installer -i <azure|aws> -f <installer_name> -a"'
     exit 0
 fi
 
@@ -341,7 +341,7 @@ fi
 
 if [[ $install -ne 1 ]];then
     echo "to accept license ($TERMS_AND_CONDITIONS_URL) and install,run: 
-docker run -v $(pwd):/icp4d_installer -it -d tf-installer -i <azure|aws> -f <installer_name> -a"
+docker run -v $(pwd):/icp4d_installer -it tf-installer -i <azure|aws> -f <installer_name> -a"
     exit 1
 fi
 
