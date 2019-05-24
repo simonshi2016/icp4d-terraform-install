@@ -356,6 +356,8 @@ function get_cluster_azure() {
     Num_Ports=$((Num_Ports+${#ports[@]}))
     ports=($(get_list_values $variable_file $install_file proxy_lb_additional_ports))
     Num_Ports=$((Num_Ports+${#ports[@]}))
+    ports=($(get_list_values $variable_file $install_file master_lb_ports_udp))
+    Num_Ports=$((Num_Ports+${#ports[@]}))
     echo "  LB Rules:  $Num_Ports"
 
     Num_VNet=1
